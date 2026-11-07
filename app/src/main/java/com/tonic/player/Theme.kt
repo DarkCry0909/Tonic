@@ -12,6 +12,7 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.Surface
 import androidx.compose.material3.darkColorScheme
 import androidx.compose.material3.dynamicDarkColorScheme
 import androidx.compose.material3.dynamicLightColorScheme
@@ -78,7 +79,14 @@ fun TonicTheme(prefs: UiPrefs, content: @Composable () -> Unit) {
         c.isAppearanceLightNavigationBars = !dark
     }
     CompositionLocalProvider(LocalPrefs provides prefs) {
-        MaterialTheme(colorScheme = scheme, content = content)
+        MaterialTheme(colorScheme = scheme) {
+            Surface(
+                Modifier.fillMaxSize(),
+                color = scheme.background,
+                contentColor = scheme.onBackground,
+                content = content
+            )
+        }
     }
 }
 

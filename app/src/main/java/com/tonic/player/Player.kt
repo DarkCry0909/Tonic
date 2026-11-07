@@ -12,6 +12,7 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Favorite
 import androidx.compose.material.icons.filled.FavoriteBorder
 import androidx.compose.material.icons.filled.KeyboardArrowDown
+import androidx.compose.material.icons.filled.MoreVert
 import androidx.compose.material.icons.filled.Pause
 import androidx.compose.material.icons.filled.PlayArrow
 import androidx.compose.material.icons.filled.Repeat
@@ -75,6 +76,9 @@ fun FullPlayer(vm: AppVm, onClose: () -> Unit) {
     val lib by vm.store.lib.collectAsState()
     val fav = t != null && lib.favorites.any { it.url == t.url }
     var drag by remember { mutableStateOf<Long?>(null) }
+    var menu by remember { mutableStateOf(false) }
+    var tempo by remember { mutableStateOf(false) }
+    var pick by remember { mutableStateOf(false) }
     val round by animateDpAsState(if (vm.isPlaying) 32.dp else 16.dp, tween(100), label = "round")
     val shown = drag ?: vm.positionMs
     val muted = MaterialTheme.colorScheme.onSurfaceVariant
@@ -90,7 +94,23 @@ fun FullPlayer(vm: AppVm, onClose: () -> Unit) {
                 Spacer(Modifier.weight(1f))
                 Text("Сейчас играет", color = muted)
                 Spacer(Modifier.weight(1f))
-                Spacer(Modifier.size(48.dp))
+                Box {
+                    IconButton(onClick = { menu = true }) { Icon(Icons.Default.MoreVert, null) }
+                    DropdownMenu(expanded = menu, onDismissRequest = { menu = false }) {
+                        DropdownMenuItem(
+                            text = { Text(if (fav) "Убрать из избранного" else "В избранное") },
+                            onClick = { t?.let { vm.toggleFav(it) }; menu = false }
+                        )
+                        DropdownMenuItem(
+                            text = { Text("Добавить в плейлист") },
+                            onClick = { menu = false; pick = true }
+                        )
+                        DropdownMenuItem(
+                            text = { Text("Скорость и тональность") },
+                            onClick = { menu = false; tempo = true }
+                        )
+                    }
+                }
             }
             Spacer(Modifier.height(12.dp))
             Art(t?.thumb, Modifier.fillMaxWidth(0.8f).aspectRatio(1f))
@@ -148,35 +168,6 @@ fun FullPlayer(vm: AppVm, onClose: () -> Unit) {
             }
             Spacer(Modifier.height(16.dp))
 
-            PanelCard {
-                Column(Modifier.padding(16.dp)) {
-                    Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
-                        Text("Скорость", fontWeight = FontWeight.Medium)
-                        Text("%.2f×".format(vm.speed), color = MaterialTheme.colorScheme.primary)
-                    }
-                    Slider(
-                        value = vm.speed,
-                        onValueChange = { vm.setTempo((it * 20).roundToInt() / 20f, vm.semitones) },
-                        valueRange = 0.5f..2f,
-                        steps = 29
-                    )
-                    Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
-                        Text("Тональность", fontWeight = FontWeight.Medium)
-                        Text(
-                            (if (vm.semitones > 0) "+" else "") + "${vm.semitones} пт",
-                            color = MaterialTheme.colorScheme.primary
-                        )
-                    }
-                    Slider(
-                        value = vm.semitones.toFloat(),
-                        onValueChange = { vm.setTempo(vm.speed, it.roundToInt()) },
-                        valueRange = -6f..6f,
-                        steps = 11
-                    )
-                    TextButton(onClick = { vm.setTempo(1f, 0) }) { Text("Сбросить") }
-                }
-            }
-
             if (vm.queue.size > 1) {
                 Spacer(Modifier.height(16.dp))
                 Text("Очередь", Modifier.fillMaxWidth(), style = MaterialTheme.typography.titleMedium)
@@ -203,5 +194,42 @@ fun FullPlayer(vm: AppVm, onClose: () -> Unit) {
             }
             Spacer(Modifier.height(24.dp))
         }
+    }
+
+    if (pick && t != null) PlaylistPicker(vm, t) { pick = false }
+    if (tempo) {
+        AlertDialog(
+            onDismissRequest = { tempo = false },
+            title = { Text("Скорость и тональность") },
+            text = {
+                Column {
+                    Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
+                        Text("Скорость", fontWeight = FontWeight.Medium)
+                        Text("%.2f×".format(vm.speed), color = MaterialTheme.colorScheme.primary)
+                    }
+                    Slider(
+                        value = vm.speed,
+                        onValueChange = { vm.setTempo((it * 20).roundToInt() / 20f, vm.semitones) },
+                        valueRange = 0.5f..2f,
+                        steps = 29
+                    )
+                    Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
+                        Text("Тональность", fontWeight = FontWeight.Medium)
+                        Text(
+                            (if (vm.semitones > 0) "+" else "") + "${vm.semitones} пт",
+                            color = MaterialTheme.colorScheme.primary
+                        )
+                    }
+                    Slider(
+                        value = vm.semitones.toFloat(),
+                        onValueChange = { vm.setTempo(vm.speed, it.roundToInt()) },
+                        valueRange = -6f..6f,
+                        steps = 11
+                    )
+                }
+            },
+            confirmButton = { TextButton(onClick = { tempo = false }) { Text("Готово") } },
+            dismissButton = { TextButton(onClick = { vm.setTempo(1f, 0) }) { Text("Сбросить") } }
+        )
     }
 }

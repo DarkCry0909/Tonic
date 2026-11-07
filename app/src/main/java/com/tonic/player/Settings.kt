@@ -153,12 +153,6 @@ fun SettingsScreen(vm: AppVm, onBack: () -> Unit, doSync: () -> Unit, doImport: 
                         Yt.lowQuality = it
                         StreamResolver.clear()
                     }
-                    SettingsSection("Скорость и тональность")
-                    SettingItem(
-                        "Сбросить скорость и тональность",
-                        "Сейчас: %.2f×, %+d пт".format(vm.speed, vm.semitones),
-                        onClick = { vm.setTempo(1f, 0) }
-                    )
                     SettingsSection("Воспроизведение")
                     SettingSwitch("Повторять текущий трек", null, vm.repeatOne) { vm.toggleRepeat() }
                 }
