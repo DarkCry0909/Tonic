@@ -1,3 +1,7 @@
 <resources>
-    <style name="Theme.Tonic" parent="android:Theme.DeviceDefault.NoActionBar" />
+    <style name="Theme.Tonic" parent="android:Theme.Material.NoActionBar">
+        <item name="android:windowBackground">#0E0E13</item>
+        <item name="android:statusBarColor">@android:color/transparent</item>
+        <item name="android:navigationBarColor">@android:color/transparent</item>
+    </style>
 </resources>

@@ -1,15 +1,12 @@
 <vector xmlns:android="http://schemas.android.com/apk/res/android"
-    android:width="108dp"
-    android:height="108dp"
-    android:viewportWidth="108"
-    android:viewportHeight="108">
-    <path
-        android:fillColor="#FFFFFF"
-        android:pathData="M44,70 a10,8 0 1,0 20,0 a10,8 0 1,0 -20,0" />
-    <path
-        android:fillColor="#FFFFFF"
-        android:pathData="M62,32 h5 v38 h-5 z" />
-    <path
-        android:fillColor="#FFFFFF"
-        android:pathData="M67,32 l14,7 v9 l-14,-7 z" />
+    android:width="108dp" android:height="108dp"
+    android:viewportWidth="108" android:viewportHeight="108">
+    <!-- нота -->
+    <path android:fillColor="#FFFFFF" android:pathData="M30,68a9,9 0,1 0,18 0a9,9 0,1 0,-18 0"/>
+    <path android:fillColor="#FFFFFF" android:pathData="M45,36L50,36L50,68L45,68Z"/>
+    <path android:fillColor="#FFFFFF" android:pathData="M50,36L64,41L64,50L50,45Z"/>
+    <!-- полоски эквалайзера -->
+    <path android:fillColor="#FFFFFF" android:pathData="M60,56h4v14h-4z"/>
+    <path android:fillColor="#FFFFFF" android:pathData="M68,48h4v22h-4z"/>
+    <path android:fillColor="#FFFFFF" android:pathData="M76,52h4v18h-4z"/>
 </vector>
