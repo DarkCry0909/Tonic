@@ -6,9 +6,11 @@ import androidx.annotation.OptIn
 import androidx.media3.common.AudioAttributes
 import androidx.media3.common.C
 import androidx.media3.common.util.UnstableApi
+import androidx.media3.datasource.DataSource
 import androidx.media3.datasource.DataSpec
 import androidx.media3.datasource.DefaultHttpDataSource
 import androidx.media3.datasource.ResolvingDataSource
+import androidx.media3.datasource.cache.CacheDataSource
 import androidx.media3.exoplayer.ExoPlayer
 import androidx.media3.exoplayer.source.DefaultMediaSourceFactory
 import androidx.media3.session.MediaSession
@@ -50,7 +52,13 @@ class PlaybackService : MediaSessionService() {
         val http = DefaultHttpDataSource.Factory()
             .setUserAgent("Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:128.0) Gecko/20100101 Firefox/128.0")
             .setAllowCrossProtocolRedirects(true)
-        val factory = ResolvingDataSource.Factory(http, StreamResolver)
+        val resolving = ResolvingDataSource.Factory(http, StreamResolver)
+        val factory: DataSource.Factory = if (AudioCache.limitMb(this) > 0) {
+            CacheDataSource.Factory()
+                .setCache(AudioCache.get(this))
+                .setUpstreamDataSourceFactory(resolving)
+                .setFlags(CacheDataSource.FLAG_IGNORE_CACHE_ON_ERROR)
+        } else resolving
         val player = ExoPlayer.Builder(this)
             .setMediaSourceFactory(DefaultMediaSourceFactory(factory))
             .setAudioAttributes(
@@ -62,6 +70,7 @@ class PlaybackService : MediaSessionService() {
             )
             .setHandleAudioBecomingNoisy(true)
             .build()
+        SleepTimer.player = player
         session = MediaSession.Builder(this, player).build()
     }
 
@@ -73,6 +82,8 @@ class PlaybackService : MediaSessionService() {
     }
 
     override fun onDestroy() {
+        SleepTimer.set(0)
+        SleepTimer.player = null
         session?.run {
             player.release()
             release()

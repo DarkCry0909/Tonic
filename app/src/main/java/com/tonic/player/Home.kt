@@ -11,6 +11,7 @@ import androidx.compose.foundation.lazy.grid.items
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.KeyboardActions
 import androidx.compose.foundation.text.KeyboardOptions
@@ -35,6 +36,7 @@ import androidx.compose.runtime.*
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.rotate
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
@@ -106,7 +108,13 @@ fun HomeScreen(vm: AppVm, onSettings: () -> Unit) {
             ) { tab = HomeTab.values()[it]; open = null }
 
             Box(Modifier.weight(1f).fillMaxHeight()) {
-                if (cur != null) {
+                if (cur != null && cur.startsWith("yartist:")) {
+                    BackHandler { open = null }
+                    ArtistPageScreen(vm, cur.removePrefix("yartist:"), { open = null }) { open = "yalbum:$it" }
+                } else if (cur != null && cur.startsWith("yalbum:")) {
+                    BackHandler { open = null }
+                    AlbumPageScreen(vm, cur.removePrefix("yalbum:")) { open = null }
+                } else if (cur != null) {
                     val pl = lib.playlists.find { "pl:${it.id}" == cur }
                     val (title, tracks) = when {
                         cur == "fav" -> "Избранное" to lib.favorites
@@ -132,7 +140,7 @@ fun HomeScreen(vm: AppVm, onSettings: () -> Unit) {
                     )
                 } else when (tab) {
                     HomeTab.Home -> HistoryHome(vm, lib)
-                    HomeTab.Explore -> ExploreScreen(vm)
+                    HomeTab.Explore -> ExploreScreen(vm) { open = it }
                     HomeTab.Music -> {
                         val all = allTracks(lib)
                         TrackListScreen(vm, "Музыка", all, onBack = null, onDelete = null, onRemove = null)
@@ -178,10 +186,18 @@ fun HistoryHome(vm: AppVm, lib: Library) {
     }
 }
 
+fun compact(n: Long): String = when {
+    n >= 1_000_000 -> "%.1f млн".format(n / 1_000_000.0)
+    n >= 1_000 -> "%.1f тыс".format(n / 1_000.0)
+    else -> "$n"
+}
+
 @Composable
-fun ExploreScreen(vm: AppVm) {
+fun ExploreScreen(vm: AppVm, onOpen: (String) -> Unit) {
     val kb = LocalSoftwareKeyboardController.current
     val err = vm.error
+    val muted = MaterialTheme.colorScheme.onSurfaceVariant
+    val transparent = ListItemDefaults.colors(containerColor = Color.Transparent)
     Column(Modifier.fillMaxSize()) {
         ScreenTitle("Исследуйте")
         OutlinedTextField(
@@ -195,24 +211,67 @@ fun ExploreScreen(vm: AppVm) {
             keyboardOptions = KeyboardOptions(imeAction = ImeAction.Search),
             keyboardActions = KeyboardActions(onSearch = { kb?.hide(); vm.search() })
         )
+        Row(Modifier.padding(horizontal = 16.dp), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+            listOf("Песни", "Исполнители", "Альбомы").forEachIndexed { i, label ->
+                FilterChip(
+                    selected = vm.searchMode == i,
+                    onClick = { vm.searchMode = i; if (vm.query.isNotBlank()) vm.search() },
+                    label = { Text(label) }
+                )
+            }
+        }
         when {
             vm.loading -> Box(Modifier.fillMaxSize(), Alignment.Center) { CircularProgressIndicator() }
-            err != null -> Text(err, Modifier.padding(16.dp), color = MaterialTheme.colorScheme.onSurfaceVariant)
-            vm.results.isEmpty() -> Text(
-                "Введите название трека или исполнителя", Modifier.padding(16.dp),
-                color = MaterialTheme.colorScheme.onSurfaceVariant
-            )
+            err != null -> Text(err, Modifier.padding(16.dp), color = muted)
+            vm.searchMode == 0 -> {
+                if (vm.results.isEmpty()) {
+                    Text("Введите название трека или исполнителя", Modifier.padding(16.dp), color = muted)
+                } else {
+                    LazyColumn(Modifier.fillMaxSize()) {
+                        itemsIndexed(vm.results) { i, t -> TrackRow(t, vm, { vm.play(vm.results, i) }) }
+                    }
+                }
+            }
+            vm.searchMode == 1 -> LazyColumn(Modifier.fillMaxSize()) {
+                items(vm.artistResults) { a ->
+                    ListItem(
+                        headlineContent = { Text(a.name, maxLines = 1, overflow = TextOverflow.Ellipsis) },
+                        supportingContent = { if (a.subs >= 0) Text("${compact(a.subs)} подписчиков") },
+                        leadingContent = {
+                            AsyncImage(
+                                a.thumb, null,
+                                Modifier.size(48.dp).clip(CircleShape).background(MaterialTheme.colorScheme.surfaceVariant),
+                                contentScale = ContentScale.Crop
+                            )
+                        },
+                        colors = transparent,
+                        modifier = Modifier.clickable { onOpen("yartist:" + a.url) }
+                    )
+                }
+            }
             else -> LazyColumn(Modifier.fillMaxSize()) {
-                itemsIndexed(vm.results) { i, t -> TrackRow(t, vm, { vm.play(vm.results, i) }) }
+                items(vm.albumResults) { a -> AlbumRow(a) { onOpen("yalbum:" + a.url) } }
             }
         }
     }
 }
 
 @Composable
+fun AlbumRow(a: AlbumItem, onClick: () -> Unit) {
+    ListItem(
+        headlineContent = { Text(a.name, maxLines = 1, overflow = TextOverflow.Ellipsis) },
+        supportingContent = { Text(a.artist, maxLines = 1, overflow = TextOverflow.Ellipsis) },
+        leadingContent = { Art(a.thumb, Modifier.size(54.dp)) },
+        colors = ListItemDefaults.colors(containerColor = Color.Transparent),
+        modifier = Modifier.clickable(onClick = onClick)
+    )
+}
+
+@Composable
 fun TrackListScreen(
     vm: AppVm, title: String, tracks: List<Track>,
-    onBack: (() -> Unit)?, onDelete: (() -> Unit)?, onRemove: ((Track) -> Unit)?
+    onBack: (() -> Unit)?, onDelete: (() -> Unit)?, onRemove: ((Track) -> Unit)?,
+    extra: (@Composable () -> Unit)? = null
 ) {
     Column(Modifier.fillMaxSize()) {
         Row(Modifier.fillMaxWidth().padding(start = 4.dp, end = 12.dp), verticalAlignment = Alignment.CenterVertically) {
@@ -232,6 +291,7 @@ fun TrackListScreen(
             Spacer(Modifier.width(6.dp))
             Text("Слушать (${tracks.size})")
         }
+        extra?.invoke()
         LazyColumn(Modifier.fillMaxSize()) {
             itemsIndexed(tracks) { i, t ->
                 TrackRow(

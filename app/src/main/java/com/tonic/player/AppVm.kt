@@ -40,6 +40,12 @@ class AppVm(app: Application) : AndroidViewModel(app) {
     var query by mutableStateOf("")
     var results by mutableStateOf<List<Track>>(emptyList())
     var loading by mutableStateOf(false)
+    var searchMode by mutableIntStateOf(0)   // 0 песни, 1 исполнители, 2 альбомы
+    var artistResults by mutableStateOf<List<ArtistItem>>(emptyList())
+    var albumResults by mutableStateOf<List<AlbumItem>>(emptyList())
+    var lyrics by mutableStateOf<Lyrics?>(null)
+    var lyricsFor by mutableStateOf<String?>(null)
+    var lyricsState by mutableIntStateOf(0)  // 1 загрузка, 2 найден, 3 нет
     var error by mutableStateOf<String?>(null)
 
     // Плеер
@@ -139,8 +145,11 @@ class AppVm(app: Application) : AndroidViewModel(app) {
         error = null
         viewModelScope.launch {
             try {
-                results = Yt.search(q)
-                if (results.isEmpty()) error = "Ничего не найдено"
+                when (searchMode) {
+                    0 -> { results = Yt.search(q); if (results.isEmpty()) error = "Ничего не найдено" }
+                    1 -> { artistResults = Yt.searchArtists(q); if (artistResults.isEmpty()) error = "Исполнители не найдены" }
+                    else -> { albumResults = Yt.searchAlbums(q); if (albumResults.isEmpty()) error = "Альбомы не найдены" }
+                }
             } catch (e: Exception) {
                 error = "Ошибка поиска: ${e.message}"
             }
@@ -156,6 +165,61 @@ class AppVm(app: Application) : AndroidViewModel(app) {
         c.setMediaItems(list.map { it.toMediaItem() }, index, 0L)
         c.prepare()
         c.play()
+    }
+
+    fun playNext(t: Track) {
+        val c = controller ?: return
+        if (c.mediaItemCount == 0) { play(listOf(t), 0); return }
+        val at = (c.currentMediaItemIndex + 1).coerceAtMost(c.mediaItemCount)
+        c.addMediaItem(at, t.toMediaItem())
+        queue = queue.toMutableList().also { it.add(at.coerceAtMost(it.size), t) }
+        toast("Будет играть следующим")
+    }
+
+    fun addToQueue(t: Track) {
+        val c = controller ?: return
+        if (c.mediaItemCount == 0) { play(listOf(t), 0); return }
+        c.addMediaItem(t.toMediaItem())
+        queue = queue + t
+        toast("Добавлено в очередь")
+    }
+
+    fun removeFromQueue(i: Int) {
+        val c = controller ?: return
+        if (i !in 0 until c.mediaItemCount) return
+        c.removeMediaItem(i)
+        queue = queue.filterIndexed { idx, _ -> idx != i }
+    }
+
+    fun moveQueue(from: Int, to: Int) {
+        val c = controller ?: return
+        if (from !in 0 until c.mediaItemCount || to !in 0 until c.mediaItemCount) return
+        c.moveMediaItem(from, to)
+        queue = queue.toMutableList().also { val x = it.removeAt(from); it.add(to, x) }
+    }
+
+    fun loadLyrics(t: Track) {
+        if (lyricsFor == t.url) return
+        lyricsFor = t.url
+        lyrics = null
+        lyricsState = 1
+        viewModelScope.launch {
+            val l = try {
+                LyricsApi.fetch(t.title, t.artist, if (t.duration > 0) t.duration else durationMs / 1000)
+            } catch (e: Exception) {
+                null
+            }
+            if (lyricsFor == t.url) {
+                lyrics = l
+                lyricsState = if (l != null) 2 else 3
+            }
+        }
+    }
+
+    fun savePlaylist(name: String, tracks: List<Track>) {
+        val pl = Playlist("alb_" + name.hashCode(), name, tracks)
+        store.update { l -> mergeLibraries(l, Library(playlists = listOf(pl))) }
+        toast("Сохранено в плейлисты")
     }
 
     fun togglePlay() {

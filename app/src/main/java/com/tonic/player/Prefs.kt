@@ -37,6 +37,7 @@ class UiPrefs(ctx: Context) {
     val glass = BoolPref(sp, "glass", false)     // «жидкое стекло»
     val miniPrev = BoolPref(sp, "miniPrev", false)
     val lowQuality = BoolPref(sp, "lowq", false)
+    val cacheMb = IntPref(sp, "cacheMb", 512)     // 0 = кэш выключен
 
     fun resetAll() {
         scheme.set(1); theme.set(0); black.set(false); radius.set(2)

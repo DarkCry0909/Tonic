@@ -158,6 +158,24 @@ fun SettingsScreen(vm: AppVm, onBack: () -> Unit, doSync: () -> Unit, doImport: 
                 }
 
                 SettingsTab.Cache -> {
+                    SettingsSection("Кэш треков")
+                    val sizes = listOf(0, 256, 512, 1024, 2048)
+                    ChoiceItem(
+                        "Размер кэша",
+                        listOf("Выключен", "256 МБ", "512 МБ", "1 ГБ", "2 ГБ"),
+                        sizes.indexOf(ui.cacheMb.value).coerceAtLeast(0)
+                    ) {
+                        ui.cacheMb.set(sizes[it])
+                        vm.say("Размер кэша применится после перезапуска приложения")
+                    }
+                    SettingItem(
+                        "Занято сейчас",
+                        "${AudioCache.usedMb(ctx)} МБ. Прослушанные треки играют повторно без интернета"
+                    )
+                    SettingItem("Очистить кэш треков", onClick = {
+                        AudioCache.clear(ctx)
+                        vm.say("Кэш треков очищен")
+                    })
                     SettingsSection("Кэш")
                     SettingItem("Очистить кэш изображений", "Обложки загрузятся заново", onClick = {
                         ctx.imageLoader.memoryCache?.clear()

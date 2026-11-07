@@ -83,6 +83,14 @@ fun TrackRow(t: Track, vm: AppVm, onPlay: () -> Unit, onRemove: (() -> Unit)? = 
                     onClick = { vm.toggleFav(t); menu = false }
                 )
                 DropdownMenuItem(
+                    text = { Text("Играть следующим") },
+                    onClick = { vm.playNext(t); menu = false }
+                )
+                DropdownMenuItem(
+                    text = { Text("В очередь") },
+                    onClick = { vm.addToQueue(t); menu = false }
+                )
+                DropdownMenuItem(
                     text = { Text("Добавить в плейлист") },
                     onClick = { menu = false; pick = true }
                 )
