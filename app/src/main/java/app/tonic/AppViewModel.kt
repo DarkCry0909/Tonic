@@ -50,7 +50,7 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
     val corner: Dp get() = when (rounding) { 0 -> 4.dp; 2 -> 28.dp; else -> 12.dp }
 
     fun setTheme(v: Int) { themeMode = v; prefs.edit().putInt("theme", v).apply() }
-    fun setRounding(v: Int) { rounding = v; prefs.edit().putInt("round", v).apply() }
+    fun changeRounding(v: Int) { rounding = v; prefs.edit().putInt("round", v).apply() }
     fun setShowPrev(v: Boolean) { showPrevInMini = v; prefs.edit().putBoolean("prevMini", v).apply() }
 
     // ---------- Поиск / импорт ----------
@@ -246,20 +246,20 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
         controller?.setPlaybackParameters(PlaybackParameters(speed, pitchRatio()))
     }
 
-    fun setSpeed(v: Float) {
+    fun changeSpeed(v: Float) {
         speed = v
         prefs.edit().putFloat("speed", v).apply()
         applyParams()
     }
 
-    fun setSemitones(v: Int) {
+    fun changeSemitones(v: Int) {
         semitones = v
         prefs.edit().putInt("semi", v).apply()
         applyParams()
     }
 
     fun resetParams() {
-        setSpeed(1f)
-        setSemitones(0)
+        changeSpeed(1f)
+        changeSemitones(0)
     }
 }

@@ -651,14 +651,14 @@ fun SpeedPitchControls(vm: AppViewModel) {
         Text("Скорость: ×%.2f".format(vm.speed))
         Slider(
             value = vm.speed,
-            onValueChange = { vm.setSpeed(((it * 20).roundToInt()) / 20f) },
+            onValueChange = { vm.changeSpeed(((it * 20).roundToInt()) / 20f) },
             valueRange = 0.5f..2f,
             steps = 29
         )
         Text("Тональность: %+d полутонов".format(vm.semitones))
         Slider(
             value = vm.semitones.toFloat(),
-            onValueChange = { vm.setSemitones(it.roundToInt()) },
+            onValueChange = { vm.changeSemitones(it.roundToInt()) },
             valueRange = -12f..12f,
             steps = 23
         )

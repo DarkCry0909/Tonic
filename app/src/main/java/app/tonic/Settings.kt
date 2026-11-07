@@ -143,7 +143,7 @@ private fun AppearanceSection(vm: AppViewModel) {
     Text("Скруглённость миниатюр")
     Spacer(Modifier.height(8.dp))
     Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(16.dp)) {
-        Chips(listOf("Малая", "Средняя", "Большая"), vm.rounding) { vm.setRounding(it) }
+        Chips(listOf("Малая", "Средняя", "Большая"), vm.rounding) { vm.changeRounding(it) }
         Box(
             Modifier.size(48.dp).border(2.dp, MaterialTheme.colorScheme.primary, RoundedCornerShape(vm.corner))
         )
