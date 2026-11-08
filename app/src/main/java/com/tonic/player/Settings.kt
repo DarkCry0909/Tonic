@@ -158,6 +158,22 @@ fun SettingsScreen(vm: AppVm, onBack: () -> Unit, doSync: () -> Unit, doImport: 
                 }
 
                 SettingsTab.Cache -> {
+                    SettingsSection("Загрузки (офлайн)")
+                    val off by Offline.tracks.collectAsState()
+                    SettingItem("Скачано", "${off.size} треков, ${Offline.sizeMb(ctx)} МБ")
+                    SettingItem("Удалить все загрузки", "Освободит место на телефоне", onClick = {
+                        Offline.removeAll(ctx)
+                        vm.say("Загрузки удалены")
+                    })
+                    SettingsSection("Загрузки (офлайн)")
+                    SettingItem(
+                        "Скачано треков: ${Downloads.tracks.size}",
+                        "Занято ${Downloads.usedMb(ctx)} МБ. Скачанные треки играют без интернета и не удаляются сами"
+                    )
+                    SettingItem("Удалить все загрузки", onClick = {
+                        Downloads.removeAll(ctx)
+                        vm.say("Загрузки удаляются")
+                    })
                     SettingsSection("Кэш треков")
                     val sizes = listOf(0, 256, 512, 1024, 2048)
                     ChoiceItem(

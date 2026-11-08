@@ -53,12 +53,18 @@ class PlaybackService : MediaSessionService() {
             .setUserAgent("Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:128.0) Gecko/20100101 Firefox/128.0")
             .setAllowCrossProtocolRedirects(true)
         val resolving = ResolvingDataSource.Factory(http, StreamResolver)
-        val factory: DataSource.Factory = if (AudioCache.limitMb(this) > 0) {
+        val listening: DataSource.Factory = if (AudioCache.limitMb(this) > 0) {
             CacheDataSource.Factory()
                 .setCache(AudioCache.get(this))
                 .setUpstreamDataSourceFactory(resolving)
                 .setFlags(CacheDataSource.FLAG_IGNORE_CACHE_ON_ERROR)
         } else resolving
+        val factory = Downloads.playbackFactory(this, audio)
+        val factory: DataSource.Factory = CacheDataSource.Factory()
+            .setCache(Offline.cache(this))
+            .setCacheWriteDataSinkFactory(null)
+            .setUpstreamDataSourceFactory(listening)
+            .setFlags(CacheDataSource.FLAG_IGNORE_CACHE_ON_ERROR)
         val player = ExoPlayer.Builder(this)
             .setMediaSourceFactory(DefaultMediaSourceFactory(factory))
             .setAudioAttributes(

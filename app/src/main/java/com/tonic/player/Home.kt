@@ -21,6 +21,8 @@ import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.ArrowDownward
 import androidx.compose.material.icons.filled.ArrowUpward
 import androidx.compose.material.icons.filled.Delete
+import androidx.compose.material.icons.filled.Download
+import androidx.compose.material.icons.filled.Flight
 import androidx.compose.material.icons.filled.Favorite
 import androidx.compose.material.icons.filled.History
 import androidx.compose.material.icons.filled.LibraryMusic
@@ -119,6 +121,7 @@ fun HomeScreen(vm: AppVm, onSettings: () -> Unit) {
                     val (title, tracks) = when {
                         cur == "fav" -> "Избранное" to lib.favorites
                         cur == "history" -> "История" to lib.history
+                        cur == "offline" -> "Оффлайн" to Downloads.tracks.values.toList()
                         cur == "top" -> "Мой топ 50" to topTracks(lib)
                         cur.startsWith("artist:") -> {
                             val a = cur.removePrefix("artist:")
@@ -132,7 +135,9 @@ fun HomeScreen(vm: AppVm, onSettings: () -> Unit) {
                         onDelete = if (pl != null) {
                             { vm.deletePlaylist(pl.id); open = null }
                         } else null,
-                        onRemove = if (cur == "fav") {
+                        onRemove = if (cur == "offline") {
+                            { t: Track -> vm.removeDownload(t) }
+                        } else if (cur == "fav") {
                             { t: Track -> vm.toggleFav(t) }
                         } else if (pl != null) {
                             { t: Track -> vm.removeFromPlaylist(pl.id, t.url) }
@@ -282,14 +287,17 @@ fun TrackListScreen(
                 style = MaterialTheme.typography.headlineLarge, maxLines = 1, overflow = TextOverflow.Ellipsis
             )
         }
-        Button(
-            onClick = { vm.play(tracks, 0) },
-            enabled = tracks.isNotEmpty(),
-            modifier = Modifier.padding(horizontal = 16.dp, vertical = 4.dp)
-        ) {
-            Icon(Icons.Default.PlayArrow, null)
-            Spacer(Modifier.width(6.dp))
-            Text("Слушать (${tracks.size})")
+        Row(Modifier.padding(horizontal = 16.dp, vertical = 4.dp), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+            Button(onClick = { vm.play(tracks, 0) }, enabled = tracks.isNotEmpty()) {
+                Icon(Icons.Default.PlayArrow, null)
+                Spacer(Modifier.width(6.dp))
+                Text("Слушать (${tracks.size})")
+            }
+            FilledTonalButton(onClick = { vm.downloadAll(tracks) }, enabled = tracks.isNotEmpty()) {
+                Icon(Icons.Default.Download, null)
+                Spacer(Modifier.width(6.dp))
+                Text("Скачать")
+            }
         }
         extra?.invoke()
         LazyColumn(Modifier.fillMaxSize()) {
@@ -355,6 +363,7 @@ fun PlaylistsScreen(vm: AppVm, lib: Library, onOpen: (String) -> Unit) {
         }
         LazyVerticalGrid(GridCells.Adaptive(120.dp), contentPadding = PaddingValues(8.dp)) {
             item { Tile("Избранное", Icons.Default.Favorite, Color(0xFFBF4040), null) { onOpen("fav") } }
+            item { Tile("Оффлайн", Icons.Default.Flight, Color(0xFF4D7CE0), null) { onOpen("offline") } }
             item { Tile("Мой топ 50", Icons.Default.TrendingUp, Color(0xFFBF4040), null) { onOpen("top") } }
             item { Tile("История", Icons.Default.History, muted, null) { onOpen("history") } }
             items(list) { p ->

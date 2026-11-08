@@ -61,6 +61,7 @@ class AppVm(app: Application) : AndroidViewModel(app) {
     var index by mutableIntStateOf(0)
     var positionMs by mutableLongStateOf(0L)
     var repeatOne by mutableStateOf(false)
+    var repeatAll by mutableStateOf(false)
     private var lastRecorded: String? = null
     private var pending = "drive"
 
@@ -82,6 +83,15 @@ class AppVm(app: Application) : AndroidViewModel(app) {
 
     init {
         Yt.lowQuality = ui.lowQuality.value
+        try {
+            Downloads.manager(app)
+            if (Downloads.states.values.any { it.state != androidx.media3.exoplayer.offline.Download.STATE_COMPLETED }) {
+                androidx.media3.exoplayer.offline.DownloadService.start(app, TonicDownloadService::class.java)
+            }
+        } catch (e: Exception) {
+            // загрузки возобновятся при следующем запуске
+        }
+        Offline.init(app)
         val app2 = getApplication<Application>()
         val token = SessionToken(app2, ComponentName(app2, PlaybackService::class.java))
         val future = MediaController.Builder(app2, token).buildAsync()
@@ -222,6 +232,22 @@ class AppVm(app: Application) : AndroidViewModel(app) {
         toast("Сохранено в плейлисты")
     }
 
+    fun download(t: Track) {
+        Downloads.add(getApplication<Application>(), t)
+        toast("Загрузка начата")
+    }
+
+    fun downloadAll(list: List<Track>) {
+        val todo = list.filter { !Downloads.isDone(it.url) && !Downloads.isActive(it.url) }
+        todo.forEach { Downloads.add(getApplication<Application>(), it) }
+        toast(if (todo.isEmpty()) "Всё уже скачано" else "Загрузка начата: ${todo.size}")
+    }
+
+    fun removeDownload(t: Track) {
+        Downloads.remove(getApplication<Application>(), t.url)
+        toast("Загрузка удалена")
+    }
+
     fun togglePlay() {
         controller?.let { if (it.isPlaying) it.pause() else it.play() }
     }
@@ -231,9 +257,41 @@ class AppVm(app: Application) : AndroidViewModel(app) {
         controller?.play()
     }
 
+    private fun applyRepeat() {
+        controller?.repeatMode = when {
+            repeatOne -> Player.REPEAT_MODE_ONE
+            repeatAll -> Player.REPEAT_MODE_ALL
+            else -> Player.REPEAT_MODE_OFF
+        }
+    }
+
     fun toggleRepeat() {
         repeatOne = !repeatOne
-        controller?.repeatMode = if (repeatOne) Player.REPEAT_MODE_ONE else Player.REPEAT_MODE_OFF
+        if (repeatOne) repeatAll = false
+        applyRepeat()
+    }
+
+    fun toggleQueueLoop() {
+        repeatAll = !repeatAll
+        if (repeatAll) repeatOne = false
+        applyRepeat()
+    }
+
+    // ---------- Загрузки (офлайн) ----------
+    fun download(t: Track) {
+        Offline.download(getApplication<Application>(), t)
+        toast("Загрузка: «${t.title}»")
+    }
+
+    fun downloadAll(list: List<Track>) {
+        val todo = list.filter { !Offline.isDownloaded(it.url) }
+        todo.forEach { Offline.download(getApplication<Application>(), it) }
+        toast(if (todo.isEmpty()) "Всё уже скачано" else "Скачивается треков: ${todo.size}")
+    }
+
+    fun removeDownload(t: Track) {
+        Offline.remove(getApplication<Application>(), t)
+        toast("Загрузка удалена")
     }
 
     fun next() { controller?.seekToNext() }

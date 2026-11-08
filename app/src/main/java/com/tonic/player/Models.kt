@@ -35,11 +35,11 @@ data class Library(
     val plays: Map<String, Int> = emptyMap()
 )
 
-private fun trackToJson(t: Track): JSONObject = JSONObject()
+fun trackToJson(t: Track): JSONObject = JSONObject()
     .put("url", t.url).put("title", t.title).put("artist", t.artist)
     .put("thumb", t.thumb ?: "").put("duration", t.duration)
 
-private fun trackFromJson(o: JSONObject) = Track(
+fun trackFromJson(o: JSONObject) = Track(
     o.getString("url"), o.optString("title"), o.optString("artist"),
     o.optString("thumb").ifEmpty { null }, o.optLong("duration")
 )

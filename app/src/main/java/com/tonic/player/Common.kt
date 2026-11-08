@@ -9,6 +9,8 @@ import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.DownloadDone
+import androidx.compose.material.icons.filled.DownloadDone
 import androidx.compose.material.icons.filled.MoreVert
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
@@ -58,6 +60,9 @@ fun Art(url: String?, modifier: Modifier) {
 fun TrackRow(t: Track, vm: AppVm, onPlay: () -> Unit, onRemove: (() -> Unit)? = null) {
     val lib by vm.store.lib.collectAsState()
     val fav = lib.favorites.any { it.url == t.url }
+    val downloaded by Offline.tracks.collectAsState()
+    val isDone = downloaded.any { it.url == t.url }
+    val prog = Offline.progress[t.url]
     var menu by remember { mutableStateOf(false) }
     var pick by remember { mutableStateOf(false) }
     Row(
@@ -69,11 +74,28 @@ fun TrackRow(t: Track, vm: AppVm, onPlay: () -> Unit, onRemove: (() -> Unit)? = 
         Column(Modifier.weight(1f)) {
             Text(t.title, maxLines = 1, overflow = TextOverflow.Ellipsis, fontWeight = FontWeight.Medium)
             val sub = if (t.duration > 0) "${t.artist} · ${fmt(t.duration * 1000)}" else t.artist
-            Text(
-                sub, maxLines = 1, overflow = TextOverflow.Ellipsis,
-                style = MaterialTheme.typography.bodySmall,
-                color = MaterialTheme.colorScheme.onSurfaceVariant
-            )
+            val dl = Downloads.states[t.url]
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                if (Downloads.isDone(t.url)) {
+                    Icon(Icons.Default.DownloadDone, null, Modifier.size(14.dp), tint = MaterialTheme.colorScheme.primary)
+                    Spacer(Modifier.width(4.dp))
+                } else if (dl != null && Downloads.isActive(t.url)) {
+                    Text(
+                        "${dl.percent.toInt()}% · ", style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.primary
+                    )
+                }
+                Text(
+                    sub, maxLines = 1, overflow = TextOverflow.Ellipsis,
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+            }
+        }
+        if (isDone) {
+            Icon(Icons.Default.DownloadDone, null, Modifier.size(18.dp), tint = MaterialTheme.colorScheme.primary)
+        } else if (prog != null) {
+            CircularProgressIndicator(progress = { prog }, modifier = Modifier.size(18.dp), strokeWidth = 2.dp)
         }
         Box {
             IconButton(onClick = { menu = true }) { Icon(Icons.Default.MoreVert, null) }
@@ -81,6 +103,25 @@ fun TrackRow(t: Track, vm: AppVm, onPlay: () -> Unit, onRemove: (() -> Unit)? = 
                 DropdownMenuItem(
                     text = { Text(if (fav) "Убрать из избранного" else "В избранное") },
                     onClick = { vm.toggleFav(t); menu = false }
+                )
+                DropdownMenuItem(
+                    text = { Text(if (isDone) "Удалить загрузку" else "Скачать") },
+                    onClick = { if (isDone) vm.removeDownload(t) else vm.download(t); menu = false }
+                )
+                DropdownMenuItem(
+                    text = {
+                        Text(
+                            when {
+                                Downloads.isDone(t.url) -> "Удалить загрузку"
+                                Downloads.isActive(t.url) -> "Загрузка идёт…"
+                                else -> "Скачать для офлайна"
+                            }
+                        )
+                    },
+                    onClick = {
+                        if (Downloads.isDone(t.url)) vm.removeDownload(t) else vm.download(t)
+                        menu = false
+                    }
                 )
                 DropdownMenuItem(
                     text = { Text("Играть следующим") },

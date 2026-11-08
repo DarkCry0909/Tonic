@@ -1,3 +1,4 @@
 <resources>
     <string name="app_name">Tonic</string>
+    <string name="download_channel">Загрузки</string>
 </resources>

@@ -8,6 +8,16 @@ import androidx.media3.datasource.cache.LeastRecentlyUsedCacheEvictor
 import androidx.media3.datasource.cache.SimpleCache
 import java.io.File
 
+/** Одна база на все кэши и загрузки. */
+@OptIn(UnstableApi::class)
+object ExoDb {
+    private var db: StandaloneDatabaseProvider? = null
+
+    @Synchronized
+    fun get(ctx: Context): StandaloneDatabaseProvider =
+        db ?: StandaloneDatabaseProvider(ctx.applicationContext).also { db = it }
+}
+
 /** Дисковый кэш аудио: прослушанные треки играют повторно без интернета. */
 @OptIn(UnstableApi::class)
 object AudioCache {
@@ -22,7 +32,7 @@ object AudioCache {
         val c = SimpleCache(
             File(app.cacheDir, "audio"),
             LeastRecentlyUsedCacheEvictor(maxOf(limitMb(app), 16) * 1024L * 1024L),
-            StandaloneDatabaseProvider(app)
+            ExoDb.get(app)
         )
         cache = c
         return c
